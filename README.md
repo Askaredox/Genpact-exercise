@@ -28,19 +28,23 @@ python -m pip install -r requirements.txt
 python main.py
 ```
 
-Then you are going to be prompted to insert the name of the folder that is going to be observed (the folder can exist or not).
+Then a window is going to appear and you are going to be prompted to insert the name of the folder that is going to be observed (the folder can exist or not).
 
-```
-Input the lookup folder ["./lookup"]:
-```
+![](./assets/img07.png)
 
-3 folders should be created automatically:
+Press "Start" and 3 folders should be created automatically:
 
-- `lookup` (if you just press enter or the observed folder)
+- `lookup`* (if you just press "Start" or the name of the folder you typed)
 - `no_applicable`
 - `processed`
 
+And the app is going to be in the is_watching state:
+
+![](./assets/img08.png)
+
 And a workbook called `master_workbook.xlsx` if it doesn't exists.
+
+Place any Excel file into the `lookup` folder to process the file and join into the __master_workbook.xlsx__, or any other file to move into the `no_applicable` folder.
 
 ## VBA Exercise
 

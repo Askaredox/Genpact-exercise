@@ -1,88 +1,51 @@
-import logging
-import time
-import re
-import shutil
-import openpyxl as xl
-from os import path as ospath, makedirs
-from watchdog.observers import Observer
-from watchdog.events import LoggingEventHandler
+import tkinter as tk
+from tkinter import ttk
+from watcher import Watcher
 
+class Window(tk.Tk):
+    is_watching = False # state of the watcher if its following the folder or not
+    def __init__(self, *args, **kwargs) -> None:
+        tk.Tk.__init__(self, *args, **kwargs)
+        self.protocol("WM_DELETE_WINDOW", self.on_close)
+        self.wm_title("Watcher")
+        # creating a frame and assigning it to container
+        container = tk.Frame(self, height=400, width=600)
+        # specifying the region where the frame is packed in root
+        container.pack(side="top", fill="both", expand=True)
+        frame = ttk.Frame(container, padding=10)
+        frame.grid()
+        ttk.Label(frame, text="Folder to be watched:   ").grid(column=0, row=0, pady=20)
+        self.text = tk.StringVar(value="./lookup")
+        self.entry = ttk.Entry(frame, textvariable=self.text)
+        self.entry.grid(column=1, row=0, pady=20)
+        self.button = ttk.Button(frame, text="Start", command=self.watch)
+        self.button.grid(column=0, row=1, columnspan=2)
 
-class Watcher:
-    observer = None
-    lookup_path = None
-    processed_path = 'processed'
-    noapplicable_path = 'no_applicable'
-    master_workbook_path = 'master_workbook.xlsx'
-    excel_format = r'^.+\.xlsx?$'
+        self.watcher = Watcher()
 
-    def __init__(self, path):
-        self.lookup_path = path
-        self.check_dirs()
-        event_handler = LoggingEventHandler()
-        self.observer = Observer()
-        self.observer.schedule(event_handler, self.lookup_path, recursive=True)
-        event_handler.on_created = self.on_created
+    def on_close(self):
+        """actions to be done if the window is closed, if it's still watching then stop the watcher and then destroy"""
+        if self.is_watching:
+            self.watcher.pause()
+            self.watcher.stop()
+        self.destroy()
 
-    def check_dirs(self):
-        paths = [
-            self.lookup_path,
-            self.processed_path,
-            self.noapplicable_path
-        ]
-        for path in paths:
-            if not ospath.exists(path):
-                makedirs(path)
+    def watch(self):
+        """Start watching the folder stated in the Entry if it's not watching or stop if it is"""
+        if self.is_watching:
+            self.button['text'] = "Start"
+            self.entry['state'] = "enabled"
+            self.watcher.pause()
+            self.watcher.stop()
+        else:
+            self.button['text'] = "Stop"
+            self.entry['state'] = "disabled"
+            path = self.text.get()
+            self.watcher.observe(path)
 
-        if not ospath.exists(self.master_workbook_path):
-            wb = xl.Workbook()
-            wb.save(self.master_workbook_path)
-
-    def on_created(self, event):
-        time.sleep(.5)
-        if (event.is_directory):
-            return
-        path = event.src_path
-        move_dir = self.noapplicable_path
-        if (self.is_excel_file(path)):
-            move_dir = self.processed_path
-            self.copy_sheets(path)
-
-        shutil.move(path, move_dir)
-
-    def copy_sheets(self, src):
-        master = xl.load_workbook(filename=self.master_workbook_path)
-        wb = xl.load_workbook(filename=src)
-
-        for sheet in wb.worksheets:
-            ws = master.create_sheet()
-            for row in sheet:
-                for cell in row:
-                    ws[cell.coordinate].value = cell.value
-        master.save(filename=self.master_workbook_path)
-
-    def is_excel_file(self, path):
-        _, file = ospath.split(path)
-        match = re.search(self.excel_format, file)
-        return match is not None
-
-    def observe(self):
-        self.observer.start()
-        try:
-            while (True):
-                time.sleep(1)
-        except KeyboardInterrupt:
-            self.observer.stop()
-        self.observer.join()
-
-
-def main():
-    logging.basicConfig(
-        level=logging.INFO, format='%(asctime)s - %(message)s', datefmt='%Y-%m-%d %H:%M:%S')
-    path = input('Input the lookup folder ["./lookup"]:')
-    w = Watcher(path if path != '' else 'lookup')
-    w.observe()
+        self.is_watching = not self.is_watching
 
 
 if __name__ == "__main__":
-    main()
+    w = Window()
+    w.mainloop()
